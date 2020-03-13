@@ -39,7 +39,7 @@ class OnenceWS extends Client
     }
 
     /**
-     * @return Request richiesta per ricevere il token.
+     * @return Request
      */
     private function __getTokenRequest(){
         return new Request('POST',"{$this::$baseUrl}/oauth/token",
@@ -189,8 +189,6 @@ class OnenceWS extends Client
     }
 
     /**
-     * dopo 20 giorni gli sms vengono cancellati , quindi mi ha consigliato mister capo bianco
-     * di salvarli su db
      * @param  string $iccid
      * @throws  ErrorException
      * @return stdClass
