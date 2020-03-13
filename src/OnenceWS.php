@@ -32,9 +32,9 @@ class OnenceWS extends Client
     public function __construct($clientId,$clientSecret,$version = self::V1)
     {
         parent::__construct(['base_uri' => self::$baseUrl]);
-        $this->encodedAuthorization = base64_encode("$this->clientId:$this->clientSecret");
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
+        $this->encodedAuthorization = base64_encode("$this->clientId:$this->clientSecret");
         $this->apiVersion = $version;
     }
 
