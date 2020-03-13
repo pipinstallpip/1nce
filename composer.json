@@ -1,6 +1,6 @@
 {
   "name": "pipinstallpip/onencews",
-  "type": "composer-plugin",
+  "type": "library",
   "description": "Http client for official 1nce rest api https://api.1nce.com",
   "keywords": ["1nce","once","onence","client","http"],
   "license": "MIT",
@@ -19,5 +19,5 @@
       "pipinstallpip\\onencews\\": "src"
     }
   },
-  "minimum-stability": "dev"
+  "minimum-stability": "dev-master"
 }
