@@ -1,6 +1,6 @@
 <?php
 
-namespace pipinstallpip\OnenceWS;
+namespace pipinstallpip\onencews;
 
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Client;

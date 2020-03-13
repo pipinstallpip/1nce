@@ -1,5 +1,5 @@
 {
-  "name": "pipinstallpip/OnenceWS",
+  "name": "pipinstallpip/onencews",
   "type": "composer-plugin",
   "description": "Http client for official 1nce rest api https://api.1nce.com",
   "keywords": ["1nce","once","onence","client","http"],
