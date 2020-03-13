@@ -1,0 +1,17 @@
+{
+  "name": "pipinstallpip/OnenceWS",
+  "type": "composer-plugin",
+  "description": "Http client for official 1nce rest api https://api.1nce.com",
+  "keywords": ["1nce","once","onence","client","http"],
+  "license": "MIT",
+  "homepage": "https://github.com/pipinstallpip/1nce",
+  "authors": [
+    {
+      "name": "pipinstallpip",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "guzzlehttp/guzzle": "~6.0"
+  }
+}
