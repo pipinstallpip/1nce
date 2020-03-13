@@ -16,7 +16,7 @@
   },
   "autoload": {
     "psr-4": {
-      "pipinstallpip\\onencews\\": "src"
+      "pipinstallpip\\onencews\\": "src/"
     }
   },
   "minimum-stability": "dev"
