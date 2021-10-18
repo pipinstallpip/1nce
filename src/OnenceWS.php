@@ -76,7 +76,7 @@ class OnenceWS extends Client {
                 'Connection' => 'keep-alive',
             ];
         } else {
-            throw new ErrorException('Errore durante il decoding del access token');
+            throw new ErrorException('Error while getting an authorization token.');
         }
     }
 
