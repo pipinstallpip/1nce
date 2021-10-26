@@ -102,7 +102,7 @@ class OnenceWS extends Client {
 
         $postBody = [];
 
-        if ($type == "POST") {
+        if ($type != "GET") {
             curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
         }
         curl_setopt_array($curl, [
@@ -129,13 +129,12 @@ class OnenceWS extends Client {
      */
     private function __standard($url, $type, $params = []) {
         $curl = $this->prepareCurlRequest($url, $type, $params);
-
         $response = curl_exec($curl);
         $err = curl_error($curl);
+        curl_close($curl);
         if ($err) {
             throw new Exception($err);
         }
-        curl_close($curl);
         return $response;
     }
 
@@ -329,7 +328,7 @@ class OnenceWS extends Client {
      * @throws  ErrorException
      * @return int
      */
-    public function changeSimState($iccid, $newStatus, $newLabel = '', $imeiLock = true) {
+    public function changeSimState($iccid, $newStatus = "Enabled", $newLabel = '', $imeiLock = true) {
         return $this->__standardPut(
             "sims/$iccid",
             [
