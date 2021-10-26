@@ -5,6 +5,7 @@ namespace pipinstallpip\onencews;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Client;
 use \ErrorException;
+use Exception;
 use Psr\Http\Message\ResponseInterface;
 use \stdClass;
 
@@ -23,9 +24,10 @@ class OnenceWS extends Client {
     private $encodedAuthorization;
     private $authToken;
     private $tokenType;
-    private $expiresIn;
     private $header;
     private $apiVersion;
+
+    private $curl;
 
 
     public function __construct($clientId, $clientSecret, $version = self::V1) {
@@ -67,13 +69,13 @@ class OnenceWS extends Client {
             $this->tokenType = $responseContent->token_type;
             $this->expiresIn = $responseContent->expires_in;
             $this->header = [
-                'Content-Type' => "application/json",
-                'Authorization' => "$this->tokenType $this->authToken",
-                'Accept' => '*/*',
-                'Cache-Control' => 'no-cache',
-                'Host' => 'api.1nce.com',
-                'Accept-Encoding' => 'gzip, deflate',
-                'Connection' => 'keep-alive',
+                'Content-Type: application/json',
+                'Authorization: ' . $this->tokenType . ' ' . $this->authToken,
+                'Accept: */*',
+                'Cache-Control: no-cache',
+                'Host: api.1nce.com',
+                'Accept-Encoding: gzip, deflate',
+                'Connection: keep-alive',
             ];
         } else {
             throw new ErrorException('Error while getting an authorization token.');
@@ -93,6 +95,31 @@ class OnenceWS extends Client {
     }
 
 
+    private function prepareCurlRequest($url, $type, $params) {
+        $this->__setAuthToken();
+
+        $curl = curl_init();
+
+        $postBody = [];
+
+        if ($type == "POST") {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
+        }
+        curl_setopt_array($curl, [
+            CURLOPT_URL => self::$baseUrl . "/" . $this->apiVersion . "/" . $url, //. "?access_token=" . $this->authToken,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => $type,
+            CURLOPT_HTTPHEADER => $this->header,
+        ]);
+
+        return $curl;
+    }
+
+
     /**
      * @return ResponseInterface|string
      * @throws ErrorException
@@ -101,6 +128,18 @@ class OnenceWS extends Client {
      * @param  array $params
      */
     private function __standard($url, $type, $params = []) {
+        $curl = $this->prepareCurlRequest($url, $type, $params);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        if ($err) {
+            throw new Exception($err);
+        }
+        curl_close($curl);
+        return $response;
+    }
+
+    private function __sendGuzzle($url, $type, $params = []) {
         return $this->send($this->__prepare($url, $type, $params));
     }
 
@@ -111,7 +150,7 @@ class OnenceWS extends Client {
      * @throws ErrorException
      */
     private function __standardGet($url, $params = []) {
-        return json_decode($this->__standard($url, 'GET', $params)->getBody()->getContents());
+        return json_decode($this->__standard($url, 'GET', $params));
     }
 
     /**
@@ -121,7 +160,7 @@ class OnenceWS extends Client {
      * @throws ErrorException
      */
     private function __standardPost($url, $params = []) {
-        return $this->__standard($url, 'POST', $params)->getStatusCode();
+        return json_decode($this->__standard($url, 'POST', $params));
     }
 
     /**
@@ -131,7 +170,7 @@ class OnenceWS extends Client {
      * @throws ErrorException
      */
     private function __standardPut($url, $params = []) {
-        return $this->__standard($url, 'PUT', $params)->getStatusCode();
+        return json_decode($this->__standard($url, 'PUT', $params));
     }
 
     /**
@@ -141,7 +180,7 @@ class OnenceWS extends Client {
      * @throws ErrorException
      */
     private function __standardDelete($url, $params = []) {
-        return $this->__standard($url, 'DELETE', $params)->getStatusCode();
+        return json_decode($this->__standard($url, 'DELETE', $params));
     }
 
 
