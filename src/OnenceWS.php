@@ -328,7 +328,7 @@ class OnenceWS extends Client {
      * @throws  ErrorException
      * @return int
      */
-    public function changeSimState($iccid, $newStatus = "Enabled", $newLabel = '', $imeiLock = true) {
+    public function changeSimState($iccid, $newStatus = "Enabled", $newLabel = '', $imeiLock = false) {
         return $this->__standardPut(
             "sims/$iccid",
             [
