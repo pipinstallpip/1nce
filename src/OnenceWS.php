@@ -252,7 +252,7 @@ class OnenceWS extends Client {
      * @return stdClass
      */
     public function getSimStatus($iccid) {
-        return $this->__standardGet("sims/$iccid/status");
+        return $this->__standardGet("sims/$iccid/status")->status;
     }
 
     /**
