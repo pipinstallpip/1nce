@@ -29,7 +29,7 @@ class OnenceWS extends Client
     private $curl;
 
 
-    public function __construct($clientId, $clientSecret, $version = self::$V1)
+    public function __construct($clientId, $clientSecret, $version = "v1")
     {
         parent::__construct(['base_uri' => self::$baseUrl]);
         $this->clientId = $clientId;
