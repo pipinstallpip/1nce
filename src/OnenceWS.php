@@ -206,8 +206,8 @@ class OnenceWS extends Client {
      * @throws  ErrorException
      * @return stdClass
      */
-    public function getSimUsage($iccid) {
-        return $this->__standardGet("sims/$iccid/usage");
+    public function getSimUsage($iccid, $options = []) {
+        return $this->__standardGet("sims/$iccid/usage", $options);
     }
 
     /**
