@@ -11,10 +11,10 @@ use stdClass;
 
 class OnenceWS extends Client
 {
-    public const ACTIVATED = 'Activated';
-    public const DISABLED = 'Disabled';
-    public const APN = 'iot.1nce.net';
-    public const V1 = 'v1';
+    public $ACTIVATED = 'Activated';
+    public $DISABLED = 'Disabled';
+    public $APN = 'iot.1nce.net';
+    public $V1 = 'v1';
 
     private static $baseUrl = 'https://api.1nce.com/management-api';
 
@@ -29,7 +29,7 @@ class OnenceWS extends Client
     private $curl;
 
 
-    public function __construct($clientId, $clientSecret, $version = self::V1)
+    public function __construct($clientId, $clientSecret, $version = self::$V1)
     {
         parent::__construct(['base_uri' => self::$baseUrl]);
         $this->clientId = $clientId;
