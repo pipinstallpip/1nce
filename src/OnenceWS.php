@@ -109,7 +109,7 @@ class OnenceWS extends Client
         if ($type != "GET") {
             curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
         }
-        if ($type == "GET" && array_size($params) > 0) {
+        if ($type == "GET" && sizeof($params) > 0) {
             $url = $url . '?' . http_build_query(params);
         }
         curl_setopt_array($curl, [
