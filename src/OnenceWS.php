@@ -110,7 +110,7 @@ class OnenceWS extends Client
             curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
         }
         if ($type == "GET" && sizeof($params) > 0) {
-            $url = $url . '?' . http_build_query(params);
+            $url = $url . '?' . http_build_query($params);
         }
         curl_setopt_array($curl, [
             CURLOPT_URL => self::$baseUrl . "/" . $this->apiVersion . "/" . $url, //. "?access_token=" . $this->authToken,
