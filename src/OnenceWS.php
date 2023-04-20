@@ -4,32 +4,32 @@ namespace pipinstallpip\onencews;
 
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Client;
-use \ErrorException;
+use ErrorException;
+use Exception;
 use Psr\Http\Message\ResponseInterface;
-use \stdClass;
-
+use stdClass;
 
 class OnenceWS extends Client
 {
-
-    const ACTIVATED = 'Activated';
-    const DISABLED = 'Disabled';
-    const APN = 'iot.1nce.net';
-    const V1 = 'v1';
+    public $ACTIVATED = 'Activated';
+    public $DISABLED = 'Disabled';
+    public $APN = 'iot.1nce.net';
+    public $V1 = 'v1';
 
     private static $baseUrl = 'https://api.1nce.com/management-api';
 
     private $clientId;
     private $clientSecret;
-    private $encodedAuthorization ;
+    private $encodedAuthorization;
     private $authToken;
     private $tokenType;
-    private $expiresIn;
     private $header;
     private $apiVersion;
 
+    private $curl;
 
-    public function __construct($clientId,$clientSecret,$version = self::V1)
+
+    public function __construct($clientId, $clientSecret, $version = "v1")
     {
         parent::__construct(['base_uri' => self::$baseUrl]);
         $this->clientId = $clientId;
@@ -41,8 +41,11 @@ class OnenceWS extends Client
     /**
      * @return Request
      */
-    private function __getTokenRequest(){
-        return new Request('POST',"{$this::$baseUrl}/oauth/token",
+    private function __getTokenRequest()
+    {
+        return new Request(
+            'POST',
+            "{$this::$baseUrl}/oauth/token",
             [
                 'Content-Type' => 'application/x-www-form-urlencoded',
                 'authorization' => "Basic $this->encodedAuthorization"
@@ -55,23 +58,29 @@ class OnenceWS extends Client
      * @return void setta auth token.
      * @throws ErrorException
      */
-    private function __setAuthToken(){
-        $responseContent = json_decode($this->send($this->__getTokenRequest())->getBody()->getContents());
-        if((isset($responseContent->access_token))){
+    private function __setAuthToken()
+    {
+        if (!\apcu_exists("1nce_auth_token")) {
+            $responseContent = json_decode($this->send($this->__getTokenRequest())->getBody()->getContents());
+            \apcu_store("1nce_auth_token", $responseContent, $responseContent->expires_in);
+        } else {
+            $responseContent = \apcu_fetch("1nce_auth_token");
+        }
+        if ((isset($responseContent->access_token))) {
             $this->authToken = $responseContent->access_token;
             $this->tokenType = $responseContent->token_type;
             $this->expiresIn = $responseContent->expires_in;
             $this->header = [
-                'Content-Type' => "application/json",
-                'Authorization' => "$this->tokenType $this->authToken",
-                'Accept' => '*/*',
-                'Cache-Control' => 'no-cache',
-                'Host' => 'api.1nce.com',
-                'Accept-Encoding' => 'gzip, deflate',
-                'Connection' => 'keep-alive',
+                'Content-Type: application/json',
+                'Authorization: ' . $this->tokenType . ' ' . $this->authToken,
+                'Accept: */*',
+                'Cache-Control: no-cache',
+                'Host: api.1nce.com',
+                'Accept-Encoding: gzip, deflate',
+                'Connection: keep-alive',
             ];
-        }else{
-            throw new ErrorException('Errore durante il decoding del access token');
+        } else {
+            throw new ErrorException('Error while getting an authorization token.');
         }
     }
 
@@ -82,9 +91,39 @@ class OnenceWS extends Client
      * @param  string $type
      * @param  array $params
      */
-    private function __prepare($url,$type,$params = []){
+    private function __prepare($url, $type, $params = [])
+    {
         $this->__setAuthToken();
-        return new Request($type,"{$this::$baseUrl}/$this->apiVersion/$url?access_token=$this->authToken", $this->header, json_encode($params));
+        return new Request($type, "{$this::$baseUrl}/$this->apiVersion/$url?access_token=$this->authToken", $this->header, json_encode($params));
+    }
+
+
+    private function prepareCurlRequest($url, $type, $params)
+    {
+        $this->__setAuthToken();
+
+        $curl = curl_init();
+
+        $postBody = [];
+
+        if ($type != "GET") {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($params));
+        }
+        if ($type == "GET" && sizeof($params) > 0) {
+            $url = $url . '?' . http_build_query($params);
+        }
+        curl_setopt_array($curl, [
+            CURLOPT_URL => self::$baseUrl . "/" . $this->apiVersion . "/" . $url, //. "?access_token=" . $this->authToken,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => $type,
+            CURLOPT_HTTPHEADER => $this->header,
+        ]);
+
+        return $curl;
     }
 
 
@@ -95,8 +134,21 @@ class OnenceWS extends Client
      * @param  string $type
      * @param  array $params
      */
-    private function __standard($url,$type,$params = []){
-        return $this->send($this->__prepare($url,$type,$params));
+    private function __standard($url, $type, $params = [])
+    {
+        $curl = $this->prepareCurlRequest($url, $type, $params);
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+        if ($err) {
+            throw new Exception($err);
+        }
+        return $response;
+    }
+
+    private function __sendGuzzle($url, $type, $params = [])
+    {
+        return $this->send($this->__prepare($url, $type, $params));
     }
 
     /**
@@ -105,8 +157,9 @@ class OnenceWS extends Client
      * @param  array $params
      * @throws ErrorException
      */
-    private function __standardGet($url,$params = []){
-        return json_decode($this->__standard($url,'GET',$params)->getBody()->getContents());
+    private function __standardGet($url, $params = [])
+    {
+        return json_decode($this->__standard($url, 'GET', $params));
     }
 
     /**
@@ -115,8 +168,9 @@ class OnenceWS extends Client
      * @param  array $params
      * @throws ErrorException
      */
-    private function __standardPost($url,$params = []){
-        return $this->__standard($url,'POST',$params)->getStatusCode();
+    private function __standardPost($url, $params = [])
+    {
+        return json_decode($this->__standard($url, 'POST', $params));
     }
 
     /**
@@ -125,8 +179,9 @@ class OnenceWS extends Client
      * @param  array $params
      * @throws ErrorException
      */
-    private function __standardPut($url,$params = []){
-        return $this->__standard($url,'PUT',$params)->getStatusCode();
+    private function __standardPut($url, $params = [])
+    {
+        return json_decode($this->__standard($url, 'PUT', $params));
     }
 
     /**
@@ -135,8 +190,9 @@ class OnenceWS extends Client
      * @param  array $params
      * @throws ErrorException
      */
-    private function __standardDelete($url,$params = []){
-        return $this->__standard($url,'DELETE',$params)->getStatusCode();
+    private function __standardDelete($url, $params = [])
+    {
+        return json_decode($this->__standard($url, 'DELETE', $params));
     }
 
 
@@ -145,7 +201,8 @@ class OnenceWS extends Client
     /**
      *  get all sims
      */
-    public function getSimsList(){
+    public function getSimsList()
+    {
         return $this->__standardGet('sims');
     }
 
@@ -154,7 +211,8 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return stdClass
      */
-    public function getSimReachibility($iccid){
+    public function getSimReachibility($iccid)
+    {
         return $this->__standardGet("sims/$iccid/connectivity_info");
     }
 
@@ -163,9 +221,9 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return stdClass
      */
-    public function getSimUsage($iccid)
+    public function getSimUsage($iccid, $options = [])
     {
-        return $this->__standardGet("sims/$iccid/usage");
+        return $this->__standardGet("sims/$iccid/usage", $options);
     }
 
     /**
@@ -215,7 +273,7 @@ class OnenceWS extends Client
      */
     public function getSimStatus($iccid)
     {
-        return $this->__standardGet("sims/$iccid/status");
+        return $this->__standardGet("sims/$iccid/status")->status;
     }
 
     /**
@@ -234,7 +292,7 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return stdClass
      */
-    public function getSmsDetails($iccid,$idSms)
+    public function getSmsDetails($iccid, $idSms)
     {
         return $this->__standardGet("sims/$iccid/sms/$idSms");
     }
@@ -255,9 +313,11 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return int
      */
-    public function sendSms($iccid,$sms,$expiry_date = null,$source_address = 1234567890,$udh = 'string',$dcs = 8){
-        if(is_null($expiry_date))
+    public function sendSms($iccid, $sms, $expiry_date = null, $source_address = 1234567890, $udh = 'string', $dcs = 8)
+    {
+        if (is_null($expiry_date)) {
             $expiry_date = date("Y-m-d", strtotime("+7 days"));
+        }
 
         return $this->__standardPost(
             "sims/$iccid/sms",
@@ -269,7 +329,7 @@ class OnenceWS extends Client
                 'source_address_type' => [
                     'id' => 145
                 ],
-                'expiry_date' => $expiry_date.'T18:10:29.000+0000'
+                'expiry_date' => $expiry_date . 'T18:10:29.000+0000'
             ]
         );
     }
@@ -279,7 +339,8 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return int
      */
-    public function resetSim($iccid){
+    public function resetSim($iccid)
+    {
         return $this->__standardPost("sims/$iccid/reset");
     }
     //INFO: END POST REQUEST
@@ -293,9 +354,11 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return int
      */
-    public function changeSimState($iccid,$newStatus ,$newLabel = '' ,$imeiLock = true){
+    public function changeSimState($iccid, $newStatus = "Enabled", $newLabel = '', $imeiLock = false)
+    {
         return $this->__standardPut(
-            "sims/$iccid",[
+            "sims/$iccid",
+            [
                 "iccid" => $iccid,
                 "label" => $newLabel,
                 "imei_lock" => $imeiLock,
@@ -314,12 +377,10 @@ class OnenceWS extends Client
      * @throws  ErrorException
      * @return int
      */
-    public function deleteSpecificSms($iccid,$smsId)
+    public function deleteSpecificSms($iccid, $smsId)
     {
         return $this->__standardDelete("sims/$iccid/sms/$smsId");
     }
 
     //INFO: END DELETE REQUEST
-
 }
-
